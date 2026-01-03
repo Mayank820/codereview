@@ -6,6 +6,49 @@ import { headers } from "next/headers";
 import { Octokit } from "octokit";
 import prisma from "@/lib/db";
 
+
+export async function getContributionStats() {
+    try {
+        const session = await auth.api.getSession({
+            headers: await headers(),
+        })
+        if (!session?.user) {
+            throw new Error("User not authenticated");
+        }
+
+        const token = await getGithubAccessToken();
+
+        const octokit = new Octokit({
+            auth: token,
+        })
+
+        const { data: user } = await octokit.rest.users.getAuthenticated();
+
+        const userName = user.login
+
+        const calendar = await fetechUserContribution(token, userName)
+
+        if (!calendar) {
+            return null
+        }
+
+        const contributions = calendar.weeks.flatMap((week: any) => week.contributionDays.map((day: any) => ({
+            date: day.date,
+            count: day.contributionCount,
+            level: Math.min(4, Math.floor(day.contributionCount / 3))  // convert to 0-4 scale
+        })))
+
+        return {
+            contributions,
+            totalContributions: calendar.totoalContributions
+        }
+
+    } catch (error) {
+        console.log("Error fetching contribution stats", error);
+        return null
+    }
+}
+
 export async function getDashboardStats() {
     try {
         const session = await auth.api.getSession({
@@ -54,7 +97,7 @@ export async function getDashboardStats() {
     }
 }
 
-export async function monthlyActivity() {
+export async function getMonthlyActivity() {
     try {
         const session = await auth.api.getSession({
             headers: await headers(),
@@ -135,12 +178,12 @@ export async function monthlyActivity() {
             }
         })
 
+        const since = sixMonthsAgo.toISOString().split("T")[0];
+
         const { data: prs } = await octokit.rest.search.issuesAndPullRequests({
-            q: `author:${user.login} type:pr created:>
-            ${sixMonthsAgo.toISOString().split('T')[0]}
-            `,
-            per_page: 100
-        })
+            q: `author:${user.login} type:pr created:>${since}`,
+            per_page: 100,
+        });
 
         prs.items.forEach((pr: any) => {
             const date = new Date(pr.created_at)
@@ -160,5 +203,3 @@ export async function monthlyActivity() {
         return []
     }
 }
-
-// 02:37

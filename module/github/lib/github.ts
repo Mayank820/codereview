@@ -40,7 +40,7 @@ export async function fetechUserContribution(token: string, userName: string) {
         user(login: $userName) {
             contributionsCollection {
                 contributionCalendar {
-                totalContributions
+                    totoalContributions: totalContributions
                     weeks {
                         contributionDays {
                             contributionCount
@@ -77,6 +77,7 @@ export async function fetechUserContribution(token: string, userName: string) {
         })
         return response.user.contributionsCollection.contributionCalendar
     } catch (error) {
-
+        console.error("Error fecthing user contribution", error);
+        return null
     }
 }
