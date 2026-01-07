@@ -27,11 +27,12 @@ export const AppSidebar = () => {
         {
             title: "Dashboard",
             href: "/dashboard",
-            icon: BookOpen
+            icon: BookOpen,
+            exact: true
         },
         {
             title: "Repository",
-            href: "/repository",
+            href: "/dashboard/repository",
             icon: Github
         },
         {
@@ -42,12 +43,14 @@ export const AppSidebar = () => {
         {
             title: "Subscriptions",
             href: "/subscriptions",
-            icon: BookOpen
+            icon: BookOpen,
+            exact: true
         },
         {
             title: "Settings",
             href: "/settings",
-            icon: Settings
+            icon: Settings,
+            exact: true
         }
     ]
 
