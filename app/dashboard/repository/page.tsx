@@ -1,6 +1,6 @@
 "use client"
 
-import React from 'react'
+import React, { use } from 'react'
 import { Card, CardContent, CardDescription, CardTitle, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { ExternalLink, Star, Search } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useRepositories } from '@/module/repository/hooks/use-repositories';
 import { RepositoryListSkeleton } from '@/module/repository/components/repository-skeleton';
+import { useConnectRepository } from '@/module/repository/hooks/use-connect-repository';
 
 
 interface Repository {
@@ -25,6 +26,8 @@ interface Repository {
 
 const RepositoryPage = () => {
     const { data, isLoading, isError, fetchNextPage, hasNextPage, isFetchingNextPage } = useRepositories()
+
+    const { mutate: connectRepo } = useConnectRepository();
 
     const [localConnectingId, setLocalConnectingId] = useState<number | null>(null);
 
@@ -88,8 +91,17 @@ const RepositoryPage = () => {
     ))
 
     const handleConnect = (repo: any) => {
-
+        setLocalConnectingId(repo.id);
+        connectRepo({
+            owner: repo.full_name.split("/")[0],
+            repo: repo.name,
+            githubID: repo.id
+        },
+            {
+                onSettled: () => setLocalConnectingId(null)
+            })
     }
+
     return (
         <div className='space-y-4'>
             <div>

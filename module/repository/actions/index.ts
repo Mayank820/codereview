@@ -2,7 +2,7 @@
 import prisma from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { getRepositories } from "@/module/github/lib/github";
+import { createWebHook, getRepositories } from "@/module/github/lib/github";
 import { github } from "better-auth";
 
 /**
@@ -38,4 +38,35 @@ export const fetchRepositories = async (page: number = 1, perPage: number = 10) 
         }
     ))
 
+}
+
+export const connectRepository = async (owner: string, repo: string, githubID: number) => {
+    const session = await auth.api.getSession({
+        headers: await headers(),
+    });
+
+    if (!session) {
+        throw new Error("User not authenticated");
+    }
+
+    // TODO: check if user can connect more repos
+
+    const webHook = await createWebHook(owner, repo)
+
+    if (webHook) {
+        await prisma.repository.create({
+            data: {
+                githubID: BigInt(githubID),
+                name: repo,
+                owner: owner,
+                fullName: `${owner}/${repo}`,
+                url: `https://github.com/${owner}/${repo}`,
+                userId: session.user.id
+            }
+        })
+    }
+
+    // TODO: increment repository count for usage tracking
+
+    return webHook
 }
