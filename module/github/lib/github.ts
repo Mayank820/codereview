@@ -166,3 +166,61 @@ export const deleteWebHook = async (owner: string, repo: string) => {
     }
 
 }
+
+export async function getRepofileContents(
+    token: string,
+    owner: string,
+    repo: string,
+    path: string = ""
+): Promise<{ path: string, content: string }[]> {
+    const octokit = new Octokit({
+        auth: token,
+    })
+
+    const { data } = await octokit.rest.repos.getContent({
+        owner,
+        repo,
+        path
+    })
+
+    if (!Array.isArray(data)) {
+        // basic check if it's a file
+        if (data.type === "file" && data.content) {
+            return [{
+                path: data.path,
+                content: Buffer.from(data.content, "base64").toString("utf-8")
+            }]
+        }
+        return []
+    }
+
+    let files: { path: string, content: string }[] = []
+
+    for (const item of data) {
+        if (item.type === "file" && item.content) {
+            const { data: fileData } = await octokit.rest.repos.getContent({
+                owner,
+                repo,
+                path: item.path
+            })
+
+            if (!Array.isArray(fileData) && fileData.type === "file" && fileData.content) {
+                // filtering out the non-code file like (img, svg etc..., also filter out the node_modules folder and text file like pdf, txt etc..., allow all type of code files)
+                // but for now we are pushing everything that look like text files.
+                if (!item.path.match(/\.(?:md|txt|pdf|jpg|jpeg|png|gif|svg|webp)$/i)) {
+                    files.push({
+                        path: fileData.path,
+                        content: Buffer.from(fileData.content, "base64").toString("utf-8")
+                    })
+                }
+            }
+        }
+
+        else if (item.type === "dir") {
+            const nestedFiles = await getRepofileContents(token, owner, repo, item.path)
+            files = [...files, ...nestedFiles]
+        }
+    }
+
+    return files
+}

@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { createWebHook, getRepositories } from "@/module/github/lib/github";
 import { github } from "better-auth";
+import { inngest } from "@/inngest/client";
 
 /**
  * This file contains the actions for the repository module.
@@ -67,6 +68,23 @@ export const connectRepository = async (owner: string, repo: string, githubID: n
     }
 
     // TODO: increment repository count for usage tracking
+
+    // trigger repository indexing for RAG (FIRE AND FORGET)
+    try {
+        await inngest.send({
+            name: "repository.connected",
+            data: {
+                owner: owner,
+                repo: repo,
+                githubID: githubID,
+                userId: session.user.id
+            }
+
+        })
+    } catch (error) {
+        console.error("Failed to trigger repository indexing:", error);
+        throw new Error("Failed to trigger repository indexing");
+    }
 
     return webHook
 }
