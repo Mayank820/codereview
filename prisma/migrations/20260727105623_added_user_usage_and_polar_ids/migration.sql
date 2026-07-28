@@ -1,0 +1,36 @@
+/*
+  Warnings:
+
+  - A unique constraint covering the columns `[polarCustomerId]` on the table `user` will be added. If there are existing duplicate values, this will fail.
+  - A unique constraint covering the columns `[polarSubcriptionId]` on the table `user` will be added. If there are existing duplicate values, this will fail.
+
+*/
+-- AlterTable
+ALTER TABLE "user" ADD COLUMN     "polarCustomerId" TEXT,
+ADD COLUMN     "polarSubcriptionId" TEXT,
+ADD COLUMN     "subscriptionStatus" TEXT,
+ADD COLUMN     "subscriptionTier" TEXT NOT NULL DEFAULT 'FREE';
+
+-- CreateTable
+CREATE TABLE "user_usage" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "repositoryCount" INTEGER NOT NULL DEFAULT 0,
+    "reviewCounts" JSONB NOT NULL DEFAULT '{}',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "user_usage_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "user_usage_userId_key" ON "user_usage"("userId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "user_polarCustomerId_key" ON "user"("polarCustomerId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "user_polarSubcriptionId_key" ON "user"("polarSubcriptionId");
+
+-- AddForeignKey
+ALTER TABLE "user_usage" ADD CONSTRAINT "user_usage_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -42,7 +42,7 @@ export const AppSidebar = () => {
         },
         {
             title: "Subscriptions",
-            href: "/subscriptions",
+            href: "/dashboard/subscriptions",
             icon: BookOpen,
             exact: true
         },

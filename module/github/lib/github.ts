@@ -125,7 +125,8 @@ export const createWebHook = async (owner: string, repo: string) => {
         repo,
         config: {
             url: webHookUrl,
-            content_type: "json"
+            content_type: "json",
+            secret: process.env.GITHUB_WEBHOOK_SECRET
         },
         events: ["pull_request"]
     })
@@ -223,4 +224,64 @@ export async function getRepofileContents(
     }
 
     return files
+}
+
+export interface ChangedFile {
+    filename: string;
+    status: string;
+    additions: number;
+    deletions: number;
+    patch?: string;
+}
+
+/**
+ * Returns the files changed in a pull request, each with its unified diff patch.
+ * `patch` is undefined for binary or very large files.
+ */
+export async function getPullRequestFiles(
+    token: string,
+    owner: string,
+    repo: string,
+    prNumber: number
+): Promise<ChangedFile[]> {
+    const octokit = new Octokit({ auth: token })
+
+    const files = await octokit.paginate(octokit.rest.pulls.listFiles, {
+        owner,
+        repo,
+        pull_number: prNumber,
+        per_page: 100,
+    })
+
+    return files.map((f) => ({
+        filename: f.filename,
+        status: f.status,
+        additions: f.additions,
+        deletions: f.deletions,
+        patch: f.patch,
+    }))
+}
+
+/**
+ * Posts an AI-generated review as a single PR-level comment (event: COMMENT).
+ * Returns the id of the created review.
+ */
+export async function postPullRequestReview(
+    token: string,
+    owner: string,
+    repo: string,
+    prNumber: number,
+    body: string
+): Promise<number> {
+    const octokit = new Octokit({ auth: token })
+
+    const { data } = await octokit.rest.pulls.createReview({
+        owner,
+        repo,
+        pull_number: prNumber,
+        event: "COMMENT",
+        body,
+    })
+
+    return data.id
 }
