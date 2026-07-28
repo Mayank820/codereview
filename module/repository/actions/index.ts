@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { createWebHook, getRepositories } from "@/module/github/lib/github";
 import { github } from "better-auth";
 import { inngest } from "@/inngest/client";
+import { canConnectRepository, incrementRepositoryCount } from "@/module/payment/lib/usage";
 
 /**
  * This file contains the actions for the repository module.
@@ -50,7 +51,10 @@ export const connectRepository = async (owner: string, repo: string, githubID: n
         throw new Error("User not authenticated");
     }
 
-    // TODO: check if user can connect more repos
+    const canConnect = await canConnectRepository(session.user.id)
+    if (!canConnect.allowed) {
+        throw new Error(canConnect.reason)
+    }
 
     const webHook = await createWebHook(owner, repo)
 
@@ -65,9 +69,10 @@ export const connectRepository = async (owner: string, repo: string, githubID: n
                 userId: session.user.id
             }
         })
-    }
 
-    // TODO: increment repository count for usage tracking
+        // Count this connection against the user's lifetime repo quota.
+        await incrementRepositoryCount(session.user.id)
+    }
 
     // trigger repository indexing for RAG (FIRE AND FORGET)
     try {
